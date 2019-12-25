@@ -24,7 +24,7 @@ class TsarDelinearizeTestRunner(BasicTestRunner):
         if not target_tsar_output:
             return TestRunResult(TestRunResult.ResultType.FAIL, tsar_output, test_filename)
 
-        tsar_json_search = re.search(r'\{"Accesses":{.+},"Sizes":{.+}\}', target_tsar_output[-1])
+        tsar_json_search = re.search(r'\{"Accesses":{.+},"Sizes":{.+},"IsDelinearized":\d+\}', target_tsar_output[-1])
         if not tsar_json_search:
             if self.print_test_info:
                 print('\tTSAR JSON decode error')
@@ -46,6 +46,7 @@ class TsarDelinearizeTestRunner(BasicTestRunner):
             'Test of more than one array not implemented. ' + test_filename + ' TSAR: ' + str(tsar_result)
         tsar_subscripts = list(tsar_result['Accesses'].values())[0]
         tsar_sizes = list(tsar_result['Sizes'].values())[0]
+        tsar_is_delinearized = tsar_result['IsDelinearized']
 
         test_answer_filename = '.'.join(test_filename.split('.')[:-1]) + '.ans'
         with open(os.path.join(test_dir, test_answer_filename), 'r') as test_answers:
@@ -56,6 +57,7 @@ class TsarDelinearizeTestRunner(BasicTestRunner):
             test_sizes = list(test_result['Sizes'].values())[0]
             tsar_results_description = 'TSAR Output:\n\tAccesses:\n\t' + str(tsar_subscripts) + '\n'
             tsar_results_description += '\tSizes:\n\t' + str(tsar_sizes) + '\n'
+            tsar_results_description += '\tIsDelinearized: ' + str(tsar_is_delinearized) + '\n'
 
             was_subscript_mismatch = False
             was_size_mismatch = False
@@ -166,20 +168,22 @@ class TsarDelinearizeTestRunner(BasicTestRunner):
             try:
                 with open(self.baseline_results_file_path, 'r') as baseline_results_file:
                     baseline_metrics: Metrics = decode_metrics(json.load(baseline_results_file))
+
                 successful_tests_difference = list(set(self.global_metrics.successful_tests) -
                                                    set(baseline_metrics.successful_tests))
                 successful_tests_difference.sort()
                 fail_tests_difference = list(set(self.global_metrics.failed_tests) -
                                              set(baseline_metrics.failed_tests))
                 fail_tests_difference.sort()
-                print("Baseline successful tests: " + str(baseline_metrics.successful_count) +
-                      "\nCurrent successful tests: " + str(self.global_metrics.successful_count))
-                print('New successful: ' + str(successful_tests_difference))
+                print('Baseline successful tests: ' + str(baseline_metrics.successful_count) +
+                      '\nCurrent successful tests: ' + str(self.global_metrics.successful_count))
+                print('New successful (' + str(len(successful_tests_difference)) + '): ' +
+                      str(successful_tests_difference))
 
-                print("Baseline failed tests: " + str(baseline_metrics.failed_count) +
-                      "\nCurrent failed tests: " + str(self.global_metrics.failed_count))
-                print('New failed: ' + str(fail_tests_difference))
+                print('Baseline failed tests: ' + str(baseline_metrics.failed_count) +
+                      '\nCurrent failed tests: ' + str(self.global_metrics.failed_count))
+                print('New failed (' + str(len(fail_tests_difference)) + '): ' + str(fail_tests_difference))
             except FileExistsError or FileNotFoundError:
-                print("Baseline file not found")
+                print('Baseline file not found')
             except json.decoder.JSONDecodeError:
                 print("Can't decode json in baseline file")

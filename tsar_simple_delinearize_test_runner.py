@@ -11,9 +11,9 @@ class TsarSimpleDelinearizeTestRunner(BasicTestRunner):
 
     def _process_program_response(self, test_dir, test_filename, program_response):
         tsar_output = program_response[1]
-        tsar_json_search = re.findall(r'\{"Accesses":{.+},"Sizes":{.+}\}', tsar_output)
+        tsar_json_search = re.findall(r'\{"Accesses":{.+},"Sizes":{.+},"IsDelinearized":\d+\}', tsar_output)
         if not tsar_json_search:
-            return TestRunResult(TestRunResult.ResultType.FAIL, tsar_output)
+            return TestRunResult(TestRunResult.ResultType.FAIL, tsar_output, test_filename)
         tsar_results_description = ''
         for tsar_result_json in tsar_json_search:
             try:
@@ -22,7 +22,8 @@ class TsarSimpleDelinearizeTestRunner(BasicTestRunner):
                 if self.print_test_info:
                     print('\tTSAR JSON decode error')
                 return TestRunResult(TestRunResult.ResultType.FAIL,
-                                     'TSAR JSON decode error\n' + tsar_output)
+                                     'TSAR JSON decode error\n' + tsar_output,
+                                     test_filename)
             tsar_results_description += '\tAccesses:\n'
             for array, accesses in tsar_result['Accesses'].items():
                 tsar_results_description += '\t\t' + str(array) + ': ' + str(accesses) + '\n'
